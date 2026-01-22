@@ -57,6 +57,76 @@
             "OpenStreetMap": backgroundLayer
             }).addTo(map);
 
+
+			// 兵庫県（28000_2.geojson）を追加：点データ（避難所/施設）レイヤ
+			fetch('./28000_2.geojson')
+  				.then((res) => res.json())
+  				.then((data) => {
+    		
+    				const hazardKeys = [
+      					'洪水',
+      					'崖崩れ、土石流及び地滑り',
+      					'高潮',
+      					'地震',
+      					'津波',
+      					'大規模な火事',
+      					'内水氾濫',
+      					'火山現象'
+    				];
+
+    				
+    				const hyogoLayer = L.geoJSON(data, {
+      
+      					filter: (feature) => {
+        					const addr = feature?.properties?.['住所'] ?? '';
+        
+        					return addr.startsWith('兵庫県') || addr === '';
+      					},
+						pointToLayer: (feature, latlng) => {
+        					return L.circleMarker(latlng)
+      					},
+      
+      					
+      
+
+      
+      					onEachFeature: (feature, layer) => {
+        					const p = feature.properties || {};
+        					const name = p['施設・場所名'] ?? '(名称不明)';
+        					const addr = p['住所'] ?? '(住所不明)';
+
+        					const hazards = hazardKeys
+          						.filter((k) => (p[k] ?? '') === '1')
+          						.join('、') || '（指定なし）';
+
+        					const sameAddr = (p['指定避難所との住所同一'] ?? '') === '1' ? 'はい' : 'いいえ';
+
+        					const html = `
+          					<div>
+            				<b>${name}</b><br/>
+            				${addr}<br/>
+            				<hr style="margin:6px 0"/>
+            				<b>対応災害：</b>${hazards}<br/>
+            				<b>指定避難所と住所同一：</b>${sameAddr}<br/>
+            				${p['備考'] ? `<b>備考：</b>${p['備考']}` : ''}
+          					</div>
+        					`;
+        				layer.bindPopup(html);
+      				}
+    			});
+
+    			hyogoLayer.addTo(map);
+
+    			LayerControl.addOverlay(hyogoLayer, "兵庫県施設(28000_2)");
+
+    // 表示範囲をこのレイヤに合わせる（不要ならコメントアウト）
+    			map.fitBounds(hyogoLayer.getBounds());
+  			})
+  			.catch((err) => {
+    			console.error('28000_2.geojson の読み込みに失敗:', err);
+  			});
+
+
             // ピン定義
             const nakamozu_marker = L.marker([34.544865,135.506274]); // ピン＝Markerを初期化
             nakamozu_marker.bindPopup('なかもずキャンパスC棟'); // ポップアップを紐付け
